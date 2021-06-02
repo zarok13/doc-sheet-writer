@@ -1,6 +1,6 @@
 # SSWriter or Spread Sheet Writer.
 
-## lightweight extension for spread sheet files.
+## lightweight extension for spread sheet files(in development).
 
 ## How to use
 ```
