@@ -1,7 +1,7 @@
 {
     "name": "zarok13/sswriter",
-    "description": "SSWriter - a simple spreadsheets exporter.",
-    "type": "project",
+    "description": "Lightweight spread sheet writer php extension",
+    "type": "library",
     "license": "MIT",
     "authors": [
         {
