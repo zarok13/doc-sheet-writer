@@ -1,6 +1,6 @@
-# SSWriter or Spread Sheet Writer.
+# SSWriter or SpreadSheet Writer.
 
-## lightweight extension for spread sheet files(in development).
+## lightweight extension for spreadsheet files(in development).
 
 ## How to use
 
