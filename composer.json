@@ -12,7 +12,7 @@
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "Zarok13\\SSWriter": "src/"
+            "Zarok13\\SSWriter\\": "src/"
         }
     },
     "require": {
