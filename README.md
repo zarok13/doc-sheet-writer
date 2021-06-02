@@ -3,6 +3,11 @@
 ## lightweight extension for spread sheet files(in development).
 
 ## How to use
+
+```
+composer require zarok13/sswriter
+```
+
 ```
 $data = [
     ['name1','type1'],
