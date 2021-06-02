@@ -6,7 +6,7 @@
     'aliases' => 
     array (
     ),
-    'reference' => '8d75d9fac676adaf4ddacc2f509784a37564946b',
+    'reference' => 'ec3bc686dc2dc630659986d02c951128a1fa3a1f',
     'name' => 'zarok13/sswriter',
   ),
   'versions' => 
@@ -18,7 +18,7 @@
       'aliases' => 
       array (
       ),
-      'reference' => '8d75d9fac676adaf4ddacc2f509784a37564946b',
+      'reference' => 'ec3bc686dc2dc630659986d02c951128a1fa3a1f',
     ),
   ),
 );
