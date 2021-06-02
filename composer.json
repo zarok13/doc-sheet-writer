@@ -1,0 +1,22 @@
+{
+    "name": "zarok13/sswriter",
+    "description": "SSWriter - a simple spreadsheets exporter.",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "zarok13",
+            "email": "erron13m@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Zarok13\\SSWriter": "src/"
+        }
+    },
+    "require": {
+        "php": ">=7.4.3",
+        "ext-zip": "*"
+    }
+}
