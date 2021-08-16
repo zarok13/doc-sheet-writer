@@ -2,61 +2,75 @@
 
 namespace Zarok13\SSWriter\Creator\XLSX;
 
+use Zarok13\SSWriter\Contracts\IXLSXWriter;
 use Zarok13\SSWriter\Creator\XLSX\FileStructure;
+use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
 
-class XLSXWriter extends FileStructure
+class XLSXWriter implements IXLSXWriter
 {
     private $fileStructure;
-
     private $sharedStringsFile;
-
     public $fileName;
 
-    public function __construct($fileName)
+    public function __construct(string $fileName, SheetCollection $sheetCollection)
     {
         if (!extension_loaded('zip')) {
             throw new \Exception('zip extension not loaded.');
         }
         $this->fileName = $fileName;
-        $this->fileStructure = new FileStructure();
+        $this->fileStructure = new FileStructure($sheetCollection);
         $this->create();
     }
 
-    public function create()
+    /**
+     * create xlsx file structure
+     *
+     * @return void
+     */
+    public function create(): void
     {
         $this->fileStructure
             ->addRootDirectory()
             ->addDocPropsDirectory()
             ->addRelsDirectory()
-            ->addXlDirectory();
+            ->addXlDirectory()
+            ->addContentTypeFile()
+            ->addWorkbookFile()
+            ->addWorkbookRelsFile()
+            ->addWorksheetFiles();
+            // ->addStylesFile($style)
 
         $this->sharedStringsFile = $this->fileStructure->addSharedStringsFile();
     }
 
-    public function write(array $data, string $sheet = 'sheet1')
+    /**
+     * can be used multiple times
+     *
+     * @param array $data
+     * @return void
+     */
+    public function write(array $data): void
     {
-        $sheet = new Sheet($sheet);
         $rows = $this->createRowFromArray($data);
-
-        $this->fileStructure
-            ->addContentTypeFile($sheet)
-            ->addWorkbookFile($sheet)
-            ->addWorkbookRelsFile($sheet)
-            ->addWorksheetFiles($rows);
-
-        $this->finalize();
+        $this->fileStructure->writeData($rows);
     }
 
-    public function finalize()
+    /**
+     * close files, zip data, and clear temporarly files
+     *
+     * @return void
+     */
+    public function complete(): void
     {
         $this->fileStructure
+            ->closeWorksheetFiles()
             ->closeSharedStringsFile($this->sharedStringsFile)
             ->zipData($this->fileName)
             ->cleanUp();
     }
 
     /**
-     * creates rows with own cells from array
+     * creates rows with cell's objects from array
      *
      * @param array $data
      * @return void
@@ -65,11 +79,11 @@ class XLSXWriter extends FileStructure
     {
         $rows = [];
         $cells = [];
-        foreach ($data as $row) {
+        foreach ($data as $rowIndex => $row) {
             foreach ($row as $cell) {
                 $cells[] = (new Cell())->setCell($cell);
             }
-            $rows[] = (new Row())->setRows($cells);
+            $rows[] = (new Row())->setRows($cells, $rowIndex);
             $cells = [];
         }
 

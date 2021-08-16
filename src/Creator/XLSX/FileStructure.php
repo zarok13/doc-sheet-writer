@@ -4,6 +4,7 @@ namespace Zarok13\SSWriter\Creator\XLSX;
 
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
 use Zarok13\SSWriter\Helpers\FileActions;
 use ZipArchive;
 
@@ -33,11 +34,16 @@ class FileStructure extends FileActions
     private $xlRelsDirectory;
     private $xlWorksheetsDirectory;
 
+    protected SheetCollection $sheetCollection;
+    protected array $sheets;
+    protected array $sheetFileStreams;
 
-    public function __construct()
+
+    public function __construct(SheetCollection $sheetCollection)
     {
+        $this->sheetCollection = $sheetCollection;
+        $this->sheets = $sheetCollection->getSheets();
         $this->baseDirectory = sys_get_temp_dir();
-        // $this->baseDirectory = 'public/tmp';
     }
 
     public function getWorkSheetDir()
@@ -45,14 +51,14 @@ class FileStructure extends FileActions
         return $this->xlWorksheetsDirectory;
     }
 
-    protected function addRootDirectory()
+    public function addRootDirectory()
     {
         $this->rootDirectory = $this->createDirectory($this->baseDirectory, uniqid('xlsx', true));
 
         return $this;
     }
 
-    protected function addDocPropsDirectory()
+    public function addDocPropsDirectory()
     {
         $this->docPropsDirectory = $this->createDirectory($this->rootDirectory, self::DIR_DOC_PROPS);
 
@@ -61,7 +67,7 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    protected function addRelsDirectory()
+    public function addRelsDirectory()
     {
         $this->relsDirectory = $this->createDirectory($this->rootDirectory, self::DIR_RELS);
 
@@ -70,7 +76,7 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    protected function addXlDirectory()
+    public function addXlDirectory()
     {
         $this->xlDirectory = $this->createDirectory($this->rootDirectory, self::DIR_XL);
 
@@ -79,13 +85,13 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    protected function addXlSubDirectories()
+    public function addXlSubDirectories()
     {
         $this->xlRelsDirectory = $this->createDirectory($this->xlDirectory, self::DIR_RELS);
         $this->xlWorksheetsDirectory = $this->createDirectory($this->xlDirectory, self::DIR_WORKSHEETS);
     }
 
-    protected function addDocPropsFiles()
+    public function addDocPropsFiles()
     {
         $application = self::APP_NAME;
         $createdDate = now()->format(\DateTime::W3C);
@@ -114,7 +120,7 @@ class FileStructure extends FileActions
         $this->createFile($this->docPropsDirectory, self::FILE_CORE_XML, $coreXmlContent);
     }
 
-    protected function addRelsFile()
+    public function addRelsFile()
     {
         $content =
             '<?xml version="1.0" encoding="UTF-8"?>
@@ -127,7 +133,7 @@ class FileStructure extends FileActions
         $this->createFile($this->relsDirectory, self::FILE_RELS, $content);
     }
 
-    protected function addContentTypeFile(Sheet $sheet)
+    public function addContentTypeFile()
     {
         $content =
             '<?xml version="1.0" encoding="UTF-8"?>
@@ -140,23 +146,23 @@ class FileStructure extends FileActions
                 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
                 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
 
-        foreach ($sheet->getNames() as $name) {
-            $content .= '<Override PartName="/xl/worksheets/' . $name . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+        foreach ($this->sheets as $sheet) {
+            $content .= '<Override PartName="/xl/worksheets/' . $sheet->getName() . '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
         }
 
         $content .=
             '<Override PartName="/xl/_rels/workbook.xml.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-            <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
-            <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-            <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-        </Types>';
+                <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+                <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+                <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+            </Types>';
 
         $this->createFile($this->rootDirectory, self::FILE_CONTENT_TYPES_XML, $content);
 
         return $this;
     }
 
-    protected function addWorkbookFile(Sheet $sheet)
+    public function addWorkbookFile()
     {
         $content =
             '<?xml version="1.0" encoding="UTF-8"?>
@@ -168,8 +174,8 @@ class FileStructure extends FileActions
             <workbookView showHorizontalScroll="true" showVerticalScroll="true" showSheetTabs="true" xWindow="0" yWindow="0" windowWidth="16384" windowHeight="8192" tabRatio="500" firstSheet="0" activeTab="0"/>
                 </bookViews>
                 <sheets>';
-        foreach ($sheet->getNames() as $index => $name) {
-            $content .= '<sheet name="' . $name . '" sheetId="' . ($index + 1) . '" state="visible" r:id="rId' . ($index + 1) . '"/>';
+        foreach ($this->sheets as $sheet) {
+            $content .= '<sheet name="' . $sheet->getName() . '" sheetId="' . $sheet->getIndex() . '" state="visible" r:id="rId' . $sheet->getIndex() . '"/>';
         }
 
 
@@ -188,7 +194,16 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    protected function addSharedStringsFile()
+    // public function addStylesFile(Styles $styles)
+    // {
+    //     $content = $styles->build();
+
+    //     $this->createFile($this->xlDirectory, self::FILE_STYLES_XML, $content);
+
+    //     return $this;
+    // }
+
+    public function addSharedStringsFile()
     {
         $sharedStringsFile = fopen($this->xlDirectory . '/' . self::FILE_SHARED_STRINGS, 'w+');
         $content =
@@ -199,7 +214,7 @@ class FileStructure extends FileActions
         return $sharedStringsFile;
     }
 
-    protected function closeSharedStringsFile($sharedStringsFile)
+    public function closeSharedStringsFile($sharedStringsFile)
     {
         fwrite($sharedStringsFile, '</sst>');
         fclose($sharedStringsFile);
@@ -207,7 +222,7 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    protected function addWorkbookRelsFile(Sheet $sheet)
+    public function addWorkbookRelsFile()
     {
         $content =
             '<?xml version="1.0" encoding="UTF-8"?>
@@ -215,8 +230,8 @@ class FileStructure extends FileActions
             <Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
             <Relationship Id="rIdSharedStrings" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>';
 
-        foreach ($sheet->getNames() as $index => $name) {
-            $content .= '<Relationship Id="rId' . ($index + 1) . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/' . $name . '.xml"/>';
+        foreach ($this->sheets as $sheet) {
+            $content .= '<Relationship Id="rId' . $sheet->getIndex() . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/' . $sheet->getName() . '.xml"/>';
         }
 
         $content .= '</Relationships>';
@@ -226,9 +241,8 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    public function addWorksheetFiles(array $data)
+    public function addWorksheetFiles()
     {
-
         $content =
             '<?xml version="1.0" encoding="UTF-8"?>
             <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:x14="http://schemas.microsoft.com/office/spreadsheetml/2009/9/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
@@ -238,21 +252,105 @@ class FileStructure extends FileActions
                 <sheetFormatPr defaultColWidth="11.53515625" defaultRowHeight="12.8" zeroHeight="false" outlineLevelRow="0" outlineLevelCol="0"/>
                 <sheetData>';
 
-        $this->addData($data, $content);
+        foreach ($this->sheets as $sheet) {
 
-        $content .= '</sheetData>
-                <printOptions headings="false" gridLines="false" gridLinesSet="true" horizontalCentered="false" verticalCentered="false"/>
-                <pageMargins left="0.7875" right="0.7875" top="1.05277777777778" bottom="1.05277777777778" header="0.7875" footer="0.7875"/>
-                <pageSetup paperSize="1" scale="100" firstPageNumber="1" fitToWidth="1" fitToHeight="1" pageOrder="downThenOver" orientation="portrait" blackAndWhite="false" draft="false" cellComments="none" useFirstPageNumber="true" horizontalDpi="300" verticalDpi="300" copies="1"/>
-                <headerFooter differentFirst="false" differentOddEven="false">
-                <oddHeader>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12&amp;A</oddHeader>
-                <oddFooter>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12Page &amp;P</oddFooter>
-                </headerFooter>
-            </worksheet>';
-
-        $this->createFile($this->xlWorksheetsDirectory, 'sheet1.xml', $content);
+            $this->sheetFileStreams[$sheet->getIndex()][] = fopen($this->xlWorksheetsDirectory . '/' . $sheet->getName() . '.xml', 'w');
+            fwrite($this->sheetFileStreams[$sheet->getIndex()][0], $content);
+        }
 
         return $this;
+    }
+
+    public function closeWorksheetFiles()
+    {
+        $content = '</sheetData>
+            <printOptions headings="false" gridLines="false" gridLinesSet="true" horizontalCentered="false" verticalCentered="false"/>
+            <pageMargins left="0.7875" right="0.7875" top="1.05277777777778" bottom="1.05277777777778" header="0.7875" footer="0.7875"/>
+            <pageSetup paperSize="1" scale="100" firstPageNumber="1" fitToWidth="1" fitToHeight="1" pageOrder="downThenOver" orientation="portrait" blackAndWhite="false" draft="false" cellComments="none" useFirstPageNumber="true" horizontalDpi="300" verticalDpi="300" copies="1"/>
+            <headerFooter differentFirst="false" differentOddEven="false">
+            <oddHeader>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12&amp;A</oddHeader>
+            <oddFooter>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12Page &amp;P</oddFooter>
+            </headerFooter>
+        </worksheet>';
+
+        foreach ($this->sheetFileStreams as $fileStream) {
+            fwrite($fileStream[0], $content);
+            fclose($fileStream[0]);
+        }
+
+        return $this;
+    }
+
+    public function writeData(array $rows)
+    {
+        $content = '';
+        $lastRow = end($rows);
+        $currentSheetIndex = $this->sheets[$this->sheetCollection->getCurrentSheet()]->getIndex();
+        $i = 0;
+        $currentRowIndex = 0;
+        $lastIndex = false;
+        if(isset($this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'])) {
+            $lastIndex = true;
+        }
+
+        while(count($rows)>$i){
+            if($lastIndex) {
+                $currentRowIndex = $this->sheetFileStreams[$currentSheetIndex]['lastRowIndex']+1;
+            }
+            $this->writeRow($rows[$i], $currentRowIndex, $content);
+            if ($i == $lastRow->getRowIndex()) {
+                $this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'] = $i;
+            }
+            $i++;
+            $currentRowIndex++;
+        }
+
+        
+        if (isset($this->sheetFileStreams[$currentSheetIndex][0])) {
+            \fwrite($this->sheetFileStreams[$currentSheetIndex][0], $content);
+        }
+    }
+
+    private function writeRow(Row $row, $rowIndex, &$content)
+    {
+        $content .= '<row r="' . ($rowIndex + 1) . '" customFormat="false" ht="12.8" hidden="false" customHeight="false" outlineLevel="0" collapsed="false">';
+        foreach ($row->getRows() as $columnIndex => $cell) {
+            $this->writeCell($cell, $rowIndex, $columnIndex, $content);
+        }
+        $content .= '</row>';
+    }
+
+    private function writeCell(Cell $cell, $rowIndex, $columnIndex, &$content)
+    {
+        $entry = $this->getEntry($rowIndex, $columnIndex);
+
+        $content .= '<c r="' . $entry . '" s="0"';
+
+        if ($cell->getStringType()) {
+            // if (!$this->useSharedStrings) {
+            $content .= ' t="inlineStr"><is><t>' . $cell->getValue() . '</t></is></c>';
+            // } else {
+            // $content = ' t="s"><v>' . $sharedStringId . '</v></c>';
+            // }
+        } elseif ($cell->getNumericType()) {
+            $content .= ' t="n"><v>' . $cell->getValue() . '</v></c>';
+        } elseif ($cell->getBooleanType()) {
+            $content .= ' t="b"><v>' . (int) ($cell->getValue()) . '</v></c>';
+        } elseif ($cell->getEmptyType()) {
+            $content .= '';
+        } else {
+            throw new \Exception('data type unknown: ' . gettype($cell->getValue()));
+        }
+    }
+
+    private function getEntry($row_number, $column_number)
+    {
+        $n = $column_number;
+        for ($r = ""; $n >= 0; $n = intval($n / 26) - 1) {
+            $r = chr($n % 26 + 0x41) . $r;
+        }
+
+        return $r . ($row_number + 1);
     }
 
     public function zipData($fileName)
@@ -301,54 +399,5 @@ class FileStructure extends FileActions
             }
         }
         rmdir($rootPath);
-    }
-
-    private function addData(array $rows, &$content)
-    {
-        foreach ($rows as $rowIndex => $row) {
-            $this->writeRow($row, $rowIndex, $content);
-        }
-    }
-
-    private function writeRow(Row $row, $rowIndex, &$content)
-    {
-        $content .= '<row r="' . ($rowIndex + 1) . '" customFormat="false" ht="12.8" hidden="false" customHeight="false" outlineLevel="0" collapsed="false">';
-        foreach ($row->getRows() as $columnIndex => $cell) {
-            $this->writeCell($cell, $rowIndex, $columnIndex, $content);
-        }
-        $content .= '</row>';
-    }
-
-    private function writeCell(Cell $cell, $rowIndex, $columnIndex, &$content)
-    {
-        $entry = $this->getEntry($rowIndex, $columnIndex);
-
-        $content .= '<c r="' . $entry . '" s="0"';
-
-        if ($cell->getStringType()) {
-            // if (!$this->useSharedStrings) {
-            $content .= ' t="inlineStr"><is><t>' . $cell->getValue() . '</t></is></c>';
-            // } else {
-            // $content = ' t="s"><v>' . $sharedStringId . '</v></c>';
-            // }
-        } elseif ($cell->getNumericType()) {
-            $content .= ' t="n"><v>' . $cell->getValue() . '</v></c>';
-        } elseif ($cell->getBooleanType()) {
-            $content .= ' t="b"><v>' . (int) ($cell->getValue()) . '</v></c>';
-        } elseif ($cell->getEmptyType()) {
-            $content .= '';
-        } else {
-            throw new \Exception('data type unknown: ' . gettype($cell->getValue()));
-        }
-    }
-
-    private function getEntry($row_number, $column_number)
-    {
-        $n = $column_number;
-        for ($r = ""; $n >= 0; $n = intval($n / 26) - 1) {
-            $r = chr($n % 26 + 0x41) . $r;
-        }
-
-        return $r . ($row_number + 1);
     }
 }

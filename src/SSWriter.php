@@ -3,8 +3,9 @@
 namespace Zarok13\SSWriter;
 
 use Zarok13\SSWriter\Contracts\ISSWriter;
-use Zarok13\SSWriter\Creator\CSVWriter;
-use Zarok13\SSWriter\Creator\ODFWriter;
+use Zarok13\SSWriter\Creator\CSV\CSVWriter;
+use Zarok13\SSWriter\Creator\ODF\ODFWriter;
+use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
 use Zarok13\SSWriter\Creator\XLSX\XLSXWriter;
 
 class SSWriter implements ISSWriter
@@ -14,9 +15,11 @@ class SSWriter implements ISSWriter
     const TYPE_ODF = 'odf';
 
     public $fileName;
+    protected $sheetCollection;
 
-    public function __construct($fileName = 'default') {
+    public function __construct(string $fileName = 'default', SheetCollection $sheetCollection) {
         $this->fileName = $fileName;
+        $this->sheetCollection = $sheetCollection;
     }
 
     /**
@@ -59,7 +62,7 @@ class SSWriter implements ISSWriter
     {
         switch($writerType) {
             case $writerType == self::TYPE_XLSX:
-                return new XLSXWriter($this->fileName);
+                return new XLSXWriter($this->fileName, $this->sheetCollection);
             case $writerType == self::TYPE_CSV:
                 return new CSVWriter();
             case $writerType == self::TYPE_ODF:

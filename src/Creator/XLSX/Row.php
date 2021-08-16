@@ -5,23 +5,23 @@ namespace Zarok13\SSWriter\Creator\XLSX;
 class Row
 {
     protected $rows;
-    protected $currentRowIndex = 0;
+    protected $rowIndex;
 
-    public function setRows($cells)
+    public function setRows($cells, int $rowIndex)
     {
         $this->rows = $cells;
-        $this->changeRowIndex();
+        $this->rowIndex = $rowIndex;
 
         return $this;
-    }
-
-    public function changeRowIndex()
-    {
-        $this->currentRowIndex++;
     }
 
     public function getRows()
     {
         return $this->rows;
+    }
+
+    public function getRowIndex()
+    {
+        return $this->rowIndex;
     }
 }
