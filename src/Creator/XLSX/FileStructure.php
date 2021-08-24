@@ -295,8 +295,9 @@ class FileStructure extends FileActions
 
         while(count($rows)>$i){
             if($lastIndex) {
-                $currentRowIndex = $this->sheetFileStreams[$currentSheetIndex]['lastRowIndex']+1;
+                $currentRowIndex = ++$this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'];
             }
+            
             $this->writeRow($rows[$i], $currentRowIndex, $content);
             if ($i == $lastRow->getRowIndex()) {
                 $this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'] = $i;
@@ -305,7 +306,6 @@ class FileStructure extends FileActions
             $currentRowIndex++;
         }
 
-        
         if (isset($this->sheetFileStreams[$currentSheetIndex][0])) {
             \fwrite($this->sheetFileStreams[$currentSheetIndex][0], $content);
         }
