@@ -1,9 +1,9 @@
 <?php
 
-namespace Zarok13\SSWriter\Helpers;
+namespace Zarok13\DocSheetWriter\Helpers;
 
 use Exception;
-use Zarok13\SSWriter\Contracts\IFileActions;
+use Zarok13\DocSheetWriter\Contracts\IFileActions;
 
 class FileActions implements IFileActions
 {

@@ -1,14 +1,14 @@
 <?php
 
-namespace Zarok13\SSWriter;
+namespace Zarok13\DocSheetWriter;
 
-use Zarok13\SSWriter\Contracts\ISSWriter;
-use Zarok13\SSWriter\Creator\CSV\CSVWriter;
-use Zarok13\SSWriter\Creator\ODF\ODFWriter;
-use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
-use Zarok13\SSWriter\Creator\XLSX\XLSXWriter;
+use Zarok13\DocSheetWriter\Contracts\IDSW;
+use Zarok13\DocSheetWriter\Creator\CSV\CSVWriter;
+use Zarok13\DocSheetWriter\Creator\ODF\ODFWriter;
+use Zarok13\DocSheetWriter\Creator\XLSX\Sheets\SheetCollection;
+use Zarok13\DocSheetWriter\Creator\XLSX\XLSXWriter;
 
-class SSWriter implements ISSWriter
+class DSW implements IDSW
 {
     const TYPE_XLSX = 'xlsx';
     const TYPE_CSV = 'csv';
@@ -17,9 +17,9 @@ class SSWriter implements ISSWriter
     public $fileName;
     protected $sheetCollection;
 
-    public function __construct(string $fileName = 'default', SheetCollection $sheetCollection) {
+    public function __construct(string $fileName = 'default', SheetCollection $sheetCollection = null) {
         $this->fileName = $fileName;
-        $this->sheetCollection = $sheetCollection;
+        $this->sheetCollection = $sheetCollection ?? SheetCollection::initSheets(['sheet1']);;
     }
 
     /**

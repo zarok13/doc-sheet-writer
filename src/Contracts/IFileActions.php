@@ -1,6 +1,6 @@
 <?php
 
-namespace Zarok13\SSWriter\Contracts;
+namespace Zarok13\DocSheetWriter\Contracts;
 
 interface IFileActions
 {

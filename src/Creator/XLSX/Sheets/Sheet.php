@@ -1,19 +1,38 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\XLSX\Sheets;
+namespace Zarok13\DocSheetWriter\Creator\XLSX\Sheets;
 
 
 class Sheet
 {
-    public $name;
+    private $name;
 
     // non zero based
-    public $index;
+    private $index;
+
+    private $sheetStream;
+
+    private $lastRowIndex = -1;
 
     public function __construct($name, $index)
     {
         $this->name = $name;
         $this->index = $index;
+    }
+
+    public function setSheetStream($sheetStream)
+    {
+        $this->sheetStream = $sheetStream;
+    }
+
+    public function setLastRowIndex($lastRowIndex)
+    {
+        $this->lastRowIndex = $lastRowIndex;
+    }
+
+    public function incrementLastRowIndex()
+    {
+        return ++$this->lastRowIndex;
     }
 
     public function getName()
@@ -24,5 +43,15 @@ class Sheet
     public function getIndex()
     {
         return $this->index;
+    }
+
+    public function getSheetStream()
+    {
+        return $this->sheetStream;
+    }
+
+    public function getLastRowIndex()
+    {
+        return $this->lastRowIndex;
     }
 }

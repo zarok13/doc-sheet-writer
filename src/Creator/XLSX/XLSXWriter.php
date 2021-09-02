@@ -1,15 +1,14 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\XLSX;
+namespace Zarok13\DocSheetWriter\Creator\XLSX;
 
-use Zarok13\SSWriter\Contracts\IXLSXWriter;
-use Zarok13\SSWriter\Creator\XLSX\FileStructure;
-use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
+use Zarok13\DocSheetWriter\Contracts\IXLSXWriter;
+use Zarok13\DocSheetWriter\Creator\XLSX\Core;
+use Zarok13\DocSheetWriter\Creator\XLSX\Sheets\SheetCollection;
 
 class XLSXWriter implements IXLSXWriter
 {
-    private $fileStructure;
-    private $sharedStringsFile;
+    private $core;
     public $fileName;
 
     public function __construct(string $fileName, SheetCollection $sheetCollection)
@@ -18,7 +17,7 @@ class XLSXWriter implements IXLSXWriter
             throw new \Exception('zip extension not loaded.');
         }
         $this->fileName = $fileName;
-        $this->fileStructure = new FileStructure($sheetCollection);
+        $this->core = new Core($sheetCollection);
         $this->create();
     }
 
@@ -29,30 +28,17 @@ class XLSXWriter implements IXLSXWriter
      */
     public function create(): void
     {
-        $this->fileStructure
+        $this->core
             ->addRootDirectory()
             ->addDocPropsDirectory()
             ->addRelsDirectory()
             ->addXlDirectory()
             ->addContentTypeFile()
+            ->addStylesFile()
             ->addWorkbookFile()
             ->addWorkbookRelsFile()
+            ->addSharedStringsFile()
             ->addWorksheetFiles();
-            // ->addStylesFile($style)
-
-        $this->sharedStringsFile = $this->fileStructure->addSharedStringsFile();
-    }
-
-    /**
-     * can be used multiple times
-     *
-     * @param array $data
-     * @return void
-     */
-    public function write(array $data): void
-    {
-        $rows = $this->createRowFromArray($data);
-        $this->fileStructure->writeData($rows);
     }
 
     /**
@@ -62,11 +48,24 @@ class XLSXWriter implements IXLSXWriter
      */
     public function complete(): void
     {
-        $this->fileStructure
+        $this->core
+            ->closeStylesFile()
+            ->closeSharedStringsFile()
             ->closeWorksheetFiles()
-            ->closeSharedStringsFile($this->sharedStringsFile)
             ->zipData($this->fileName)
             ->cleanUp();
+    }
+
+    /**
+     * can be used multiple times
+     *
+     * @param array $data
+     * @return void
+     */
+    public function write(array $data, int $styleIndex = 0): void
+    {
+        $rows = $this->createRowFromArray($data);
+        $this->core->writeData($rows, $styleIndex);
     }
 
     /**

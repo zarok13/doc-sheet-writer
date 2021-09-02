@@ -1,15 +1,19 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\XLSX;
+namespace Zarok13\DocSheetWriter\Creator\XLSX;
 
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use Zarok13\SSWriter\Creator\XLSX\Sheets\SheetCollection;
-use Zarok13\SSWriter\Helpers\FileActions;
-use ZipArchive;
+use Zarok13\DocSheetWriter\Creator\XLSX\Sheets\SheetCollection;
+use Zarok13\DocSheetWriter\Creator\XLSX\Traits\FileClosable;
+use Zarok13\DocSheetWriter\Creator\XLSX\Traits\SheetWritable;
+use Zarok13\DocSheetWriter\Creator\XLSX\Traits\SheetCompletable;
+use Zarok13\DocSheetWriter\Helpers\FileActions;
 
-class FileStructure extends FileActions
+class Core extends FileActions
 {
+    use SheetWritable;
+    use FileClosable;
+    use SheetCompletable;
+
     const APP_NAME = 'SSWriter';
 
     const DIR_RELS = '_rels';
@@ -36,7 +40,8 @@ class FileStructure extends FileActions
 
     protected SheetCollection $sheetCollection;
     protected array $sheets;
-    protected array $sheetFileStreams;
+    protected $stylesFileStream;
+    protected $sharedStringsFile;
 
 
     public function __construct(SheetCollection $sheetCollection)
@@ -194,14 +199,19 @@ class FileStructure extends FileActions
         return $this;
     }
 
-    // public function addStylesFile(Styles $styles)
-    // {
-    //     $content = $styles->build();
+    public function addStylesFile()
+    {
+        $content =
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
 
-    //     $this->createFile($this->xlDirectory, self::FILE_STYLES_XML, $content);
+        $stylesFile = fopen($this->xlDirectory . '/' . self::FILE_STYLES_XML, 'w+');
+        fwrite($stylesFile, $content);
 
-    //     return $this;
-    // }
+        $this->stylesFileStream = $stylesFile;
+
+        return $this;
+    }
 
     public function addSharedStringsFile()
     {
@@ -210,14 +220,7 @@ class FileStructure extends FileActions
             '<?xml version="1.0" encoding="UTF-8" ?>
             <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="8" uniqueCount="8">';
         fwrite($sharedStringsFile, $content);
-
-        return $sharedStringsFile;
-    }
-
-    public function closeSharedStringsFile($sharedStringsFile)
-    {
-        fwrite($sharedStringsFile, '</sst>');
-        fclose($sharedStringsFile);
+        $this->sharedStringsFile = $sharedStringsFile;
 
         return $this;
     }
@@ -253,151 +256,11 @@ class FileStructure extends FileActions
                 <sheetData>';
 
         foreach ($this->sheets as $sheet) {
-
-            $this->sheetFileStreams[$sheet->getIndex()][] = fopen($this->xlWorksheetsDirectory . '/' . $sheet->getName() . '.xml', 'w');
-            fwrite($this->sheetFileStreams[$sheet->getIndex()][0], $content);
+            $sheetStream = fopen($this->xlWorksheetsDirectory . '/' . $sheet->getName() . '.xml', 'w');
+            fwrite($sheetStream, $content);
+            $sheet->setSheetStream($sheetStream);
         }
 
         return $this;
-    }
-
-    public function closeWorksheetFiles()
-    {
-        $content = '</sheetData>
-            <printOptions headings="false" gridLines="false" gridLinesSet="true" horizontalCentered="false" verticalCentered="false"/>
-            <pageMargins left="0.7875" right="0.7875" top="1.05277777777778" bottom="1.05277777777778" header="0.7875" footer="0.7875"/>
-            <pageSetup paperSize="1" scale="100" firstPageNumber="1" fitToWidth="1" fitToHeight="1" pageOrder="downThenOver" orientation="portrait" blackAndWhite="false" draft="false" cellComments="none" useFirstPageNumber="true" horizontalDpi="300" verticalDpi="300" copies="1"/>
-            <headerFooter differentFirst="false" differentOddEven="false">
-            <oddHeader>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12&amp;A</oddHeader>
-            <oddFooter>&amp;C&amp;&quot;Times New Roman,Regular&quot;&amp;12Page &amp;P</oddFooter>
-            </headerFooter>
-        </worksheet>';
-
-        foreach ($this->sheetFileStreams as $fileStream) {
-            fwrite($fileStream[0], $content);
-            fclose($fileStream[0]);
-        }
-
-        return $this;
-    }
-
-    public function writeData(array $rows)
-    {
-        $content = '';
-        $lastRow = end($rows);
-        $currentSheetIndex = $this->sheets[$this->sheetCollection->getCurrentSheet()]->getIndex();
-        $i = 0;
-        $currentRowIndex = 0;
-        $lastIndex = false;
-        if(isset($this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'])) {
-            $lastIndex = true;
-        }
-
-        while(count($rows)>$i){
-            if($lastIndex) {
-                $currentRowIndex = ++$this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'];
-            }
-            
-            $this->writeRow($rows[$i], $currentRowIndex, $content);
-            if ($i == $lastRow->getRowIndex()) {
-                $this->sheetFileStreams[$currentSheetIndex]['lastRowIndex'] = $i;
-            }
-            $i++;
-            $currentRowIndex++;
-        }
-
-        if (isset($this->sheetFileStreams[$currentSheetIndex][0])) {
-            \fwrite($this->sheetFileStreams[$currentSheetIndex][0], $content);
-        }
-    }
-
-    private function writeRow(Row $row, $rowIndex, &$content)
-    {
-        $content .= '<row r="' . ($rowIndex + 1) . '" customFormat="false" ht="12.8" hidden="false" customHeight="false" outlineLevel="0" collapsed="false">';
-        foreach ($row->getRows() as $columnIndex => $cell) {
-            $this->writeCell($cell, $rowIndex, $columnIndex, $content);
-        }
-        $content .= '</row>';
-    }
-
-    private function writeCell(Cell $cell, $rowIndex, $columnIndex, &$content)
-    {
-        $entry = $this->getEntry($rowIndex, $columnIndex);
-
-        $content .= '<c r="' . $entry . '" s="0"';
-
-        if ($cell->getStringType()) {
-            // if (!$this->useSharedStrings) {
-            $content .= ' t="inlineStr"><is><t>' . $cell->getValue() . '</t></is></c>';
-            // } else {
-            // $content = ' t="s"><v>' . $sharedStringId . '</v></c>';
-            // }
-        } elseif ($cell->getNumericType()) {
-            $content .= ' t="n"><v>' . $cell->getValue() . '</v></c>';
-        } elseif ($cell->getBooleanType()) {
-            $content .= ' t="b"><v>' . (int) ($cell->getValue()) . '</v></c>';
-        } elseif ($cell->getEmptyType()) {
-            $content .= '';
-        } else {
-            throw new \Exception('data type unknown: ' . gettype($cell->getValue()));
-        }
-    }
-
-    private function getEntry($row_number, $column_number)
-    {
-        $n = $column_number;
-        for ($r = ""; $n >= 0; $n = intval($n / 26) - 1) {
-            $r = chr($n % 26 + 0x41) . $r;
-        }
-
-        return $r . ($row_number + 1);
-    }
-
-    public function zipData($fileName)
-    {
-        $rootPath = realpath($this->rootDirectory);
-        $zip = new ZipArchive();
-        // dd(base_path('/'));
-        $zip->open($fileName . '.zip', ZipArchive::CREATE | ZipArchive::OVERWRITE);
-
-        $files = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($rootPath),
-            RecursiveIteratorIterator::LEAVES_ONLY
-        );
-
-        foreach ($files as $name => $file) {
-            if (!$file->isDir()) {
-                // Get real and relative path for current file
-                $filePath = $file->getRealPath();
-                $relativePath = substr($filePath, strlen($rootPath) + 1);
-
-                // Add current file to archive
-                $zip->addFile($filePath, $relativePath);
-            }
-        }
-
-        $zip->close();
-
-        rename($fileName . '.zip', $fileName . '.xlsx');
-
-        return $this;
-    }
-
-    public function cleanUp()
-    {
-        $rootPath = realpath($this->rootDirectory);
-        $it = new RecursiveDirectoryIterator($rootPath, RecursiveDirectoryIterator::SKIP_DOTS);
-        $files = new RecursiveIteratorIterator(
-            $it,
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($files as $file) {
-            if ($file->isDir()) {
-                rmdir($file->getRealPath());
-            } else {
-                unlink($file->getRealPath());
-            }
-        }
-        rmdir($rootPath);
     }
 }

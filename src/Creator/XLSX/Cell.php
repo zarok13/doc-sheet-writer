@@ -1,6 +1,6 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\XLSX;
+namespace Zarok13\DocSheetWriter\Creator\XLSX;
 
 class Cell
 {

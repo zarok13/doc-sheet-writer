@@ -1,8 +1,8 @@
 <?php
 
-namespace Zarok13\SSWriter\Contracts;
+namespace Zarok13\DocSheetWriter\Contracts;
 
-interface ISSWriter
+interface IDSW
 {
     public function initWriter(string $writerType);
     

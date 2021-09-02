@@ -1,8 +1,8 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\XLSX\Sheets;
+namespace Zarok13\DocSheetWriter\Creator\XLSX\Sheets;
 
-use Zarok13\SSWriter\Contracts\ISheetCollection;
+use Zarok13\DocSheetWriter\Creator\XLSX\Contracts\ISheetCollection;
 
 class SheetCollection implements ISheetCollection
 {

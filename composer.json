@@ -1,6 +1,6 @@
 {
-    "name": "zarok13/sswriter",
-    "description": "Lightweight spread sheet writer php extension",
+    "name": "zarok13/doc-sheet-writer",
+    "description": "Lightweight php library for writing spreadsheets",
     "type": "library",
     "license": "MIT",
     "authors": [

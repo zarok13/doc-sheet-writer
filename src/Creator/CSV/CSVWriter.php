@@ -1,6 +1,6 @@
 <?php
 
-namespace Zarok13\SSWriter\Creator\CSV;
+namespace Zarok13\DocSheetWriter\Creator\CSV;
 
 
 class CSVWriter 
