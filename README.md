@@ -89,7 +89,9 @@ $sheets->nextSheet();
 $writerXLSX->write($data);
 $writerXLSX->complete();
 ```
-### Licence MIT License
+### Licence
+
+MIT License
 
 Copyright (c) 2021 zarok13
 
