@@ -6,7 +6,7 @@ DocSheetWriter is the lightweight php library for writing spreadsheets.
 ### Installation
 
 ```
-composer require zarok13/sswriter
+composer require zarok13/doc-sheet-writer
 ```
 ### Basic Usage
 
